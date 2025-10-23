@@ -572,6 +572,7 @@ impl Scan {
     /// * `existing_predicate` - The predicate used by the previous scan.
     #[allow(unused)]
     #[internal_api]
+    #[tracing::instrument(skip(self, engine, existing_version, existing_data, _existing_predicate))]
     pub(crate) fn scan_metadata_from(
         &self,
         engine: &dyn Engine,

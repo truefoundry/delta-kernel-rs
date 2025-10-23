@@ -10,7 +10,7 @@ use crate::arrow::datatypes::SchemaRef as ArrowSchemaRef;
 use futures::future::BoxFuture;
 use futures::stream::{BoxStream, Stream, StreamExt};
 use futures::FutureExt;
-use tracing::error;
+use tracing::{error, Instrument};
 
 use super::executor::TaskExecutor;
 use crate::engine::arrow_data::ArrowEngineData;
@@ -138,7 +138,7 @@ impl FileStream {
                     }
                 }
             }
-        });
+        }.instrument(tracing::Span::current()));
 
         Ok(Box::new(receiver.into_iter().map(|rbr| {
             rbr.map(|rb| Box::new(ArrowEngineData::new(rb)) as _)
