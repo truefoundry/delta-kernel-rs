@@ -62,6 +62,7 @@ pub(crate) struct LogSegment {
 
 impl LogSegment {
     #[internal_api]
+    #[tracing::instrument(skip(listed_files, log_root, end_version))]
     pub(crate) fn try_new(
         listed_files: ListedLogFiles,
         log_root: Url,
@@ -141,6 +142,7 @@ impl LogSegment {
     ///
     /// [`Snapshot`]: crate::snapshot::Snapshot
     #[internal_api]
+    #[tracing::instrument(skip(storage, log_root, time_travel_version))]
     pub(crate) fn for_snapshot(
         storage: &dyn StorageHandler,
         log_root: Url,
@@ -152,6 +154,7 @@ impl LogSegment {
     }
 
     // factored out for testing
+    #[tracing::instrument(skip(storage, log_root, checkpoint_hint, time_travel_version))]
     pub(crate) fn for_snapshot_impl(
         storage: &dyn StorageHandler,
         log_root: Url,
@@ -181,6 +184,7 @@ impl LogSegment {
     /// between versions `start_version` (inclusive) and `end_version` (inclusive). If no `end_version`
     /// is specified it will be the most recent version by default.
     #[internal_api]
+    #[tracing::instrument(skip(storage, log_root, start_version, end_version))]
     pub(crate) fn for_table_changes(
         storage: &dyn StorageHandler,
         log_root: Url,
@@ -223,6 +227,7 @@ impl LogSegment {
     ///
     // This lists all files starting from `end-limit` if `limit` is defined. For large tables,
     // listing with a `limit` can be a significant speedup over listing _all_ the files in the log.
+    #[tracing::instrument(skip(storage, log_root, end_version, limit))]
     pub(crate) fn for_timestamp_conversion(
         storage: &dyn StorageHandler,
         log_root: Url,
@@ -271,6 +276,7 @@ impl LogSegment {
     /// `meta_predicate` is an optional expression to filter the log files with. It is _NOT_ the
     /// query's predicate, but rather a predicate for filtering log files themselves.
     #[internal_api]
+    #[tracing::instrument(skip(self, engine, commit_read_schema, checkpoint_read_schema, meta_predicate))]
     pub(crate) fn read_actions(
         &self,
         engine: &dyn Engine,
@@ -300,6 +306,7 @@ impl LogSegment {
     /// returns files is DESCENDING ORDER, as that's what `replay` expects. This function assumes
     /// that all files in `self.ascending_commit_files` and `self.ascending_compaction_files` are in
     /// range for this log segment. This invariant is maintained by our listing code.
+    #[tracing::instrument(skip(self))]
     fn find_commit_cover(&self) -> Vec<FileMeta> {
         // Create an iterator sorted in ascending order by (initial version, end version), e.g.
         // [00.json, 00.09.compacted.json, 00.99.compacted.json, 01.json, 02.json, ..., 10.json,
@@ -349,6 +356,7 @@ impl LogSegment {
     /// sidecar files contain the actual file actions that would otherwise be
     /// stored directly in the checkpoint. The sidecar file batches are chained to the
     /// checkpoint batch in the top level iterator to be returned.
+    #[tracing::instrument(skip(self, engine, checkpoint_read_schema, meta_predicate))]
     fn create_checkpoint_stream(
         &self,
         engine: &dyn Engine,
@@ -448,6 +456,7 @@ impl LogSegment {
     ///
     /// This function extracts any sidecar file references from the provided batch.
     /// Each sidecar file is read and an iterator of file action batches is returned
+    #[tracing::instrument(skip(parquet_handler, log_root, batch, checkpoint_read_schema, meta_predicate))]
     fn process_sidecars(
         parquet_handler: Arc<dyn ParquetHandler>,
         log_root: Url,
@@ -480,6 +489,7 @@ impl LogSegment {
 
     // Do a lightweight protocol+metadata log replay to find the latest Protocol and Metadata in
     // the LogSegment
+    #[tracing::instrument(skip(self, engine))]
     pub(crate) fn protocol_and_metadata(
         &self,
         engine: &dyn Engine,
@@ -503,6 +513,7 @@ impl LogSegment {
     }
 
     // Get the most up-to-date Protocol and Metadata actions
+    #[tracing::instrument(skip(self, engine))]
     pub(crate) fn read_metadata(&self, engine: &dyn Engine) -> DeltaResult<(Metadata, Protocol)> {
         match self.protocol_and_metadata(engine)? {
             (Some(m), Some(p)) => Ok((m, p)),
@@ -513,6 +524,7 @@ impl LogSegment {
     }
 
     // Replay the commit log, projecting rows to only contain Protocol and Metadata action columns.
+    #[tracing::instrument(skip(self, engine))]
     fn replay_for_metadata(
         &self,
         engine: &dyn Engine,
@@ -530,6 +542,7 @@ impl LogSegment {
     }
 
     /// How many commits since a checkpoint, according to this log segment
+    #[tracing::instrument(skip(self))]
     pub(crate) fn commits_since_checkpoint(&self) -> u64 {
         // we can use 0 as the checkpoint version if there is no checkpoint since `end_version - 0`
         // is the correct number of commits since a checkpoint if there are no checkpoints
@@ -539,6 +552,7 @@ impl LogSegment {
     }
 
     /// How many commits since a log-compaction or checkpoint, according to this log segment
+    #[tracing::instrument(skip(self))]
     pub(crate) fn commits_since_log_compaction_or_checkpoint(&self) -> u64 {
         // Annoyingly we have to search all the compaction files to determine this, because we only
         // sort by start version, so technically the max end version could be anywhere in the vec.

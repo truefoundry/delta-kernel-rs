@@ -13,7 +13,7 @@ use futures::stream::{self, BoxStream};
 use futures::{ready, StreamExt, TryStreamExt};
 use object_store::path::Path;
 use object_store::{self, DynObjectStore, GetResultPayload, PutMode};
-use tracing::warn;
+use tracing::{warn, Instrument};
 use url::Url;
 
 use super::executor::TaskExecutor;
@@ -127,7 +127,7 @@ impl<E: TaskExecutor> JsonHandler for DefaultJsonHandler<E> {
                     warn!("read_json receiver end of channel dropped before sending completed");
                 }
             }
-        });
+        }.instrument(tracing::Span::current()));
 
         Ok(Box::new(rx.into_iter()))
     }
