@@ -24,6 +24,7 @@ pub(crate) type DomainMetadataMap = HashMap<String, DomainMetadata>;
 /// these before returning domains to the user.
 // TODO we should have some finer-grained unit tests here instead of relying on the top-level
 // snapshot tests.
+#[tracing::instrument(skip(log_segment, domain, engine))]
 pub(crate) fn domain_metadata_configuration(
     log_segment: &LogSegment,
     domain: &str,
@@ -38,6 +39,7 @@ pub(crate) fn domain_metadata_configuration(
 /// Scan the entire log for all domain metadata actions but terminate early if a specific domain
 /// is provided. Note that this returns the latest domain metadata for each domain, accounting for
 /// tombstones (removed=true) - that is, removed domain metadatas will _never_ be returned.
+#[tracing::instrument(skip(log_segment, domain, engine))]
 fn scan_domain_metadatas(
     log_segment: &LogSegment,
     domain: Option<&str>,
@@ -61,6 +63,7 @@ fn scan_domain_metadatas(
     Ok(visitor.into_domain_metadatas())
 }
 
+#[tracing::instrument(skip(log_segment, engine))]
 fn replay_for_domain_metadatas(
     log_segment: &LogSegment,
     engine: &dyn Engine,

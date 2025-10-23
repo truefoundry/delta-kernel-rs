@@ -690,6 +690,7 @@ impl Scan {
     }
 
     // Factored out to facilitate testing
+    #[tracing::instrument(skip(self, engine))]
     fn replay_for_scan_metadata(
         &self,
         engine: &dyn Engine,

@@ -257,6 +257,7 @@ impl CheckpointWriter {
     // 4. Chains the checkpoint metadata action if writing a V2 spec checkpoint
     //    (i.e., if `v2Checkpoints` feature is supported by table)
     // 5. Generates the appropriate checkpoint path
+    #[tracing::instrument(skip(self, engine))]
     pub fn checkpoint_data(&self, engine: &dyn Engine) -> DeltaResult<CheckpointDataIterator> {
         let is_v2_checkpoints_supported = self
             .snapshot
