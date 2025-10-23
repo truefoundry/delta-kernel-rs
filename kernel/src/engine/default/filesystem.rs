@@ -6,6 +6,7 @@ use futures::stream::StreamExt;
 use itertools::Itertools;
 use object_store::path::Path;
 use object_store::{DynObjectStore, ObjectStore};
+use tracing::{info_span, Instrument};
 use url::Url;
 
 use super::UrlExt;
@@ -104,7 +105,7 @@ impl<E: TaskExecutor> StorageHandler for ObjectStoreStorageHandler<E> {
                     }
                 }
             }
-        });
+        }.instrument(tracing::info_span!("list_from")));
 
         if !has_ordered_listing {
             // This FS doesn't return things in the order we require
@@ -161,7 +162,7 @@ impl<E: TaskExecutor> StorageHandler for ObjectStoreStorageHandler<E> {
                             let result = store.get(&path).await?;
                             Ok(result.bytes().await?)
                         }
-                    }
+                    }.instrument(tracing::info_span!("read_file"))
                 })
                 // We allow executing up to `readahead` futures concurrently and
                 // buffer the results. This allows us to achieve async concurrency
@@ -170,7 +171,7 @@ impl<E: TaskExecutor> StorageHandler for ObjectStoreStorageHandler<E> {
                 .for_each(move |res| {
                     sender.send(res).ok();
                     futures::future::ready(())
-                }),
+                }).instrument(tracing::info_span!("read_files")),
         );
 
         Ok(Box::new(receiver.into_iter()))
